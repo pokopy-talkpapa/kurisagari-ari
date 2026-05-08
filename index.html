@@ -293,12 +293,32 @@
   }
   .shake { animation: shake .22s ease; }
 
-  @keyframes flashCorrect {
-    0%   { filter: brightness(1); }
-    50%  { filter: brightness(1.1); }
-    100% { filter: brightness(1); }
+  @keyframes bgCorrect {
+    0%   { background: #b6f0b6; }
+    60%  { background: #dffadf; }
+    100% { background: #fff; }
   }
-  .flashCorrect { animation: flashCorrect .18s ease; }
+  .card.bgCorrect { animation: bgCorrect .45s ease; }
+
+  @keyframes bgWrong {
+    0%   { background: #ffb3b3; }
+    60%  { background: #ffe0e0; }
+    100% { background: #fff; }
+  }
+  .card.bgWrong { animation: bgWrong .45s ease; }
+
+  .starParticle {
+    position: absolute;
+    font-size: 28px;
+    pointer-events: none;
+    z-index: 20;
+    animation: starFloat .7s ease forwards;
+  }
+  @keyframes starFloat {
+    0%   { opacity: 1; transform: translate(-50%, 0) scale(0.8); }
+    40%  { opacity: 1; transform: translate(-50%, -50px) scale(1.3); }
+    100% { opacity: 0; transform: translate(-50%, -90px) scale(1); }
+  }
 
   @media (max-width: 560px) {
     .titleRow { min-height: 92px; margin-bottom: 2px; }
@@ -332,7 +352,7 @@
     </div>
 
     <div class="stage">
-      <div class="card">
+      <div id="card" class="card">
         <div id="cardInner" class="cardInner">
           <img id="hissanImg" class="hissanImg" src="" alt="筆算の問題" />
         </div>
@@ -450,6 +470,7 @@
   const messageSub      = document.getElementById("messageSub");
   const borrowBtn       = document.getElementById("borrowBtn");
   const answerButtons   = Array.from(document.querySelectorAll(".answerBtn"));
+  const card            = document.getElementById("card");
 
   // --- 音 ---
   let audioCtx = null;
@@ -514,10 +535,37 @@
     cardInner.classList.add("shake");
   }
 
-  function flashCard() {
-    cardInner.classList.remove("flashCorrect");
-    void cardInner.offsetWidth;
-    cardInner.classList.add("flashCorrect");
+  function flashCorrectCard() {
+    card.classList.remove("bgCorrect");
+    void card.offsetWidth;
+    card.classList.add("bgCorrect");
+    card.addEventListener("animationend", () => card.classList.remove("bgCorrect"), { once: true });
+    spawnStars();
+  }
+
+  function flashWrongCard() {
+    card.classList.remove("bgWrong");
+    void card.offsetWidth;
+    card.classList.add("bgWrong");
+    card.addEventListener("animationend", () => card.classList.remove("bgWrong"), { once: true });
+  }
+
+  function spawnStars() {
+    const items = [
+      { emoji: "⭐", left: "25%", top: "65%", delay: 0 },
+      { emoji: "✨", left: "50%", top: "70%", delay: 0.07 },
+      { emoji: "🌟", left: "75%", top: "65%", delay: 0.14 }
+    ];
+    items.forEach(({ emoji, left, top, delay }) => {
+      const el = document.createElement("span");
+      el.className = "starParticle";
+      el.textContent = emoji;
+      el.style.left = left;
+      el.style.top  = top;
+      el.style.animationDelay = delay + "s";
+      card.appendChild(el);
+      el.addEventListener("animationend", () => el.remove());
+    });
   }
 
   function setProblem(p) {
@@ -640,7 +688,7 @@
 
     if (isCorrect) {
       if (state.mode !== "practice") state.score++;
-      flashCard();
+      flashCorrectCard();
       playCorrect();
       const delay = state.mode === "practice" ? 300 : 200;
       state.nextId = setTimeout(() => {
@@ -655,6 +703,7 @@
       }, delay);
     } else {
       shakeCard();
+      flashWrongCard();
       playWrong();
       if (state.mode === "challenge") {
         state.misses++;
